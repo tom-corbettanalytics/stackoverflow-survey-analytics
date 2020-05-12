@@ -32,5 +32,4 @@ clean-targets:         # directories to be removed by `dbt clean`
 # using the `{{ config(...) }}` macro.
 models:
   stack_overflow_surveys:
-      dim_survey_responders:
-          materialized: table
+
