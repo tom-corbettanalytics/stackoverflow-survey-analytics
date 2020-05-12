@@ -117,7 +117,7 @@ class Survey(object):
     def format_csv_header(self, columns):
         headers = []
         for n, col in enumerate(columns):
-            if 'unnamed' in col:
+            if 'Unnamed' in col:
                 headers.append(f'col_{n}_unnamed')
             else:
                 headers.append(re.sub(r'(?<!^)(?=[A-Z])', '_', col).lower())
