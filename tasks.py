@@ -1,12 +1,32 @@
+import csv
 import os
+import re
 import urllib
 import zipfile
 from typing import Dict, Iterable
 
 import requests
+import pandas as pd
+import yaml
+import sqlalchemy as sa
 from bs4 import BeautifulSoup
 from invoke import task
 
+
+def load_sqlalchemy_engine():
+    profiles_fn = os.path.expanduser('~/.dbt/profiles.yml')
+    with open(profiles_fn) as profiles_fh:
+        profiles = yaml.load(profiles_fh, Loader=yaml.FullLoader)
+        stack_overflow_db_profile = profiles['default']['outputs']['stack_overflow_surveys']
+        db_url = sa.engine.url.URL(**{
+            'drivername': 'postgresql',
+            'username': stack_overflow_db_profile['user'],
+            'password': stack_overflow_db_profile['pass'],
+            'host': stack_overflow_db_profile['host'],
+            'port': stack_overflow_db_profile['port'],
+            'database': stack_overflow_db_profile['dbname'],
+        })
+        return sa.engine.create_engine(db_url)
 
 
 class Survey(object):
@@ -79,9 +99,9 @@ class Survey(object):
                         output_name = f"survey_{self.year}_questions.csv"
                     else:
                         output_name = f"survey_{self.year}_responses.csv"
-                    data = zip_handler.read(name)
-                    with open(os.path.join(self.data_dir, output_name), 'wb') as out:
-                        out.write(data)
+                    df = pd.read_csv(zip_handler.open(name),  encoding='ISO-8859-2')
+                    df.columns = self.format_csv_header(df.columns)
+                    df.to_sql(output_name, load_sqlalchemy_engine(), index=False, if_exists='replace')
         return self.filename
         
     def valid_zip_extract_names(self):
@@ -93,16 +113,26 @@ class Survey(object):
             f'{self.year} Stack Overflow Developer Survey Responses.csv',
             f'{self.year} Stack Overflow Survey Results/{self.year} Stack Overflow Survey Responses.csv'
         ]
+        
+    def format_csv_header(self, columns):
+        headers = []
+        for n, col in enumerate(columns):
+            if 'unnamed' in col:
+                headers.append(f'col_{n}_unnamed')
+            else:
+                headers.append(re.sub(r'(?<!^)(?=[A-Z])', '_', col).lower())
+        return headers
 
 
 @task 
 def download(ctx):
-    "Download all available surveys to ./data/zips"
+    "Download all surveys since 2016 to ./data/zips"
     
     for params in Survey.iter_all_survey_params():
-        survey = Survey(survey_id=params['survey_id'], year=params['year'])
-        survey.load()
-        print(f"Finished downloading survey from {survey.year} ({survey.survey_id})")
+        if params['year'] >= 2016:
+            survey = Survey(survey_id=params['survey_id'], year=params['year'])
+            survey.load()
+            print(f"Finished downloading survey from {survey.year} ({survey.survey_id})")
 
 
 @task
@@ -115,3 +145,7 @@ def extract(ctx):
         print(f"Finished extracting survey from {survey.year} ({survey.survey_id})")
     
 
+
+@task
+def temp(ctx):
+    print(load_sqlalchemy_engine())
