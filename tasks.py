@@ -96,9 +96,9 @@ class Survey(object):
             for name in zip_handler.namelist():
                 if name in self.valid_zip_extract_names():
                     if 'schema' in name:
-                        output_name = f"survey_{self.year}_questions.csv"
+                        output_name = f"survey_{self.year}_questions"
                     else:
-                        output_name = f"survey_{self.year}_responses.csv"
+                        output_name = f"survey_{self.year}_responses"
                     df = pd.read_csv(zip_handler.open(name),  encoding='ISO-8859-2')
                     df.columns = self.format_csv_header(df.columns)
                     df.to_sql(output_name, load_sqlalchemy_engine(), index=False, if_exists='replace')
