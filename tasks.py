@@ -1,7 +1,8 @@
 from invoke import task
-from stack_overflow_survey_analytics.models import Survey
+from stack_overflow_survey_analytics.models import Survey, Chart
 from stack_overflow_survey_analytics.utils import load_sqlalchemy_engine
 import pandas as pd
+import os
 
 
 @task 
@@ -58,3 +59,31 @@ def load_metadata(ctx, since=2017):
         metadata = pd.concat(metadata_dfs, axis='index')
         metadata.to_sql('metadata', load_sqlalchemy_engine(), if_exists='replace', index=False)
         
+        
+@task
+def render_charts(ctx):
+    "Creates the svg charts from sql queries inside of ./analysis"
+    
+    charts_config = {
+        'analytics_titles_per_year.sql': {
+            'style': 'stacked_bars',
+            'xcol': 'year',
+            'ycols': ['percent_analytics_and_other_titles', 'percent_analytics_titles_only'],
+            'ycol_names': ['Analytics and other titles', 'Analytics titles only'],
+            'ylabel': 'Percent of respondents',
+            'xlabel': 'Year',
+            'title': "Percent of respondents with Analytics titles"
+        },
+    }
+    
+    for query_filename, kwargs in charts_config.items():
+        chart = Chart(query_filename=query_filename, **kwargs)
+        chart.compile()
+        
+        
+@task
+def upload_charts(ctx):
+    "Uploads charts from ./charts to the s3 bucket s3://corbett-images"
+    
+    bucket_name = "s3://corbett-images/stack-overflow-survey-2020/"
+    os.system(f'aws s3  sync ./charts {bucket_name}')

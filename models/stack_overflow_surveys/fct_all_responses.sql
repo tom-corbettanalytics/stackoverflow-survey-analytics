@@ -66,12 +66,22 @@ union all
 select * from responses_2019
 )
 
+{% set analytics_titles_2017 = "ARRAY['Datascientist', 'Machinelearningspecialist']" %}
+{% set analytics_titles_2018 = "ARRAY['Data or business analyst', 'Data scientist or machine learning specialist']" %}
+{% set analytics_titles_2019 = "ARRAY['Data scientist or machine learning specialist', 'Data or business analyst', 'Engineer, data']" %}
+
 select 
     *,
     case
-        when year=2017 and titles && ARRAY['Datascientist', 'Machinelearningspecialist'] then true
-        when year=2018 and titles && ARRAY['Data or business analyst', 'Data scientist or machine learning specialist'] then true
-        when year=2019 and titles && ARRAY['Data scientist or machine learning specialist', 'Data or business analyst', 'Engineer, data'] then true
+        when year=2017 and titles && {{ analytics_titles_2017 }} then true
+        when year=2018 and titles && {{ analytics_titles_2018 }} then true
+        when year=2019 and titles && {{ analytics_titles_2019 }} then true
         else false
-    end as has_analytics_title
+    end as has_analytics_title,
+    case
+        when year=2017 and titles <@ {{ analytics_titles_2017 }} then true
+        when year=2018 and titles <@ {{ analytics_titles_2018 }} then true
+        when year=2019 and titles <@ {{ analytics_titles_2019 }} then true
+        else false
+    end as has_analytics_title_only
 from all_responses

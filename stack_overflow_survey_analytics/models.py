@@ -6,6 +6,17 @@ import zipfile
 import pandas as pd
 from .utils import load_sqlalchemy_engine
 import re
+from matplotlib.figure import Figure
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
+
+plt.style.use('seaborn-deep')
+mpl.rcParams['axes.labelcolor'] = 'black'
+mpl.rcParams['axes.titlesize'] = 16
+mpl.rcParams['figure.titleweight'] = 'bold'
+package_dir = os.path.dirname(os.path.abspath(__file__))
+project_dir = os.path.dirname(package_dir)
 
 
 class Survey(object):
@@ -16,9 +27,7 @@ class Survey(object):
     # All tags containing survey params have exactly this text
     survey_index_tag_contents = 'Download Full Data Set (CSV)'
     
-    # Directory where surveys are stored
-    project_dir = os.path.dirname(os.path.abspath(__file__))
-    data_dir = os.path.join(project_dir, 'data')
+    # Directory where surveys are stored    
     survey_dir = os.path.join(project_dir, 'sources')
     
     @classmethod
@@ -115,3 +124,61 @@ class Survey(object):
             else:
                 headers.append(self.to_snake_case(col))
         return headers
+        
+        
+class Chart(object):
+    
+    compiled_analysis_dir = os.path.join(project_dir, 'target', 'compiled', 'stack_overflow_survey_analysis', 'analysis')
+    compiled_charts_dir = os.path.join(project_dir, 'charts')
+    
+    def __init__(self, style, query_filename, xcol, ycols, ylabel, xlabel, title, ycol_names):
+        self.style = style
+        self.query_filename = query_filename
+        self.query_name = self.query_filename.replace('.sql', '')
+        self.xcol = xcol
+        self.ycols = ycols
+        self.ycol_names = ycol_names
+        self.ylabel = ylabel
+        self.xlabel = xlabel
+        self.title = title
+        self.chart_filename = os.path.join(self.compiled_charts_dir, self.query_name) + '.svg'
+        self.query = self.load_query()
+        self.dataset = self.load_dataset()
+        self.figure = Figure()
+        self.axes = self.figure.add_axes([0.1,0.1,0.8,0.8])        
+        if not os.path.exists(self.compiled_charts_dir):
+            os.makedirs(self.compiled_charts_dir)
+        
+    def load_query(self):
+        query_filepath = os.path.join(self.compiled_analysis_dir, self.query_filename)
+        return open(query_filepath, 'r').read()
+        
+    def load_dataset(self):
+        return pd.read_sql(self.query, load_sqlalchemy_engine())
+    
+    def compile(self):
+        return getattr(self, self.style)()
+        
+    def stacked_bars(self):
+        xvals, yvals = self.dataset[self.xcol], self.dataset[self.ycols]
+        max_yval = yvals.sum(axis=1).max()
+        
+        for n, yval in enumerate(yvals):
+            print(n, )
+            if n == 0:
+                self.axes.bar(xvals, yvals[yval], label=self.ycol_names[n])
+            else:
+                self.axes.bar(xvals, yvals[yval], bottom=yvals.iloc[:,n-1], label=self.ycol_names[n])
+        
+        # This increase might need to be determined dynamically, based on the
+        # number of yvals we're plotting. Maybe 10% per value?
+        self.axes.set_ylim([0, max_yval*1.2])
+        self.figure.suptitle(self.title, size=16)
+        self.axes.set_ylabel(self.ylabel)
+        self.axes.set_xlabel(self.xlabel)
+        self.axes.set_xticks(xvals)
+        self.axes.set_xticklabels([str(l) for l in xvals])
+        self.axes.legend()
+        self.figure.savefig(self.chart_filename)
+        print(f"Compiled {self.chart_filename}")
+        
