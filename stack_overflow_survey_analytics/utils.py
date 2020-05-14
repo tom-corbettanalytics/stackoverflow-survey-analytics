@@ -3,6 +3,15 @@ import os
 import yaml
 
 
+def usd_formatter(num, position):
+    num = float('{:.3g}'.format(num))
+    magnitude = 0
+    while abs(num) >= 1000:
+        magnitude += 1
+        num /= 1000.0
+    return '${}{}'.format('{:f}'.format(num).rstrip('0').rstrip('.'), ['', 'K', 'M', 'B', 'T'][magnitude])
+
+
 def load_sqlalchemy_engine():
     profiles_fn = os.path.expanduser('~/.dbt/profiles.yml')
     with open(profiles_fn) as profiles_fh:

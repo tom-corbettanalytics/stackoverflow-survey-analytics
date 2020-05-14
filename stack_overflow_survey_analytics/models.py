@@ -15,6 +15,8 @@ plt.style.use('seaborn-deep')
 mpl.rcParams['axes.labelcolor'] = 'black'
 mpl.rcParams['axes.titlesize'] = 16
 mpl.rcParams['figure.titleweight'] = 'bold'
+mpl.rcParams['axes.facecolor'] = '#F7F8FA'
+plt.rcParams['savefig.facecolor'] = '#F7F8FA'
 package_dir = os.path.dirname(os.path.abspath(__file__))
 project_dir = os.path.dirname(package_dir)
 
@@ -131,7 +133,8 @@ class Chart(object):
     compiled_analysis_dir = os.path.join(project_dir, 'target', 'compiled', 'stack_overflow_survey_analysis', 'analysis')
     compiled_charts_dir = os.path.join(project_dir, 'charts')
     
-    def __init__(self, style, query_filename, xcol, ycols, ylabel, xlabel, title, ycol_names):
+    def __init__(self, style, query_filename, xcol, ycols, ylabel, xlabel, 
+                 title, ycol_names, yaxis_formatter=None):
         self.style = style
         self.query_filename = query_filename
         self.query_name = self.query_filename.replace('.sql', '')
@@ -139,13 +142,21 @@ class Chart(object):
         self.ycols = ycols
         self.ycol_names = ycol_names
         self.ylabel = ylabel
+        self.yaxis_formatter = yaxis_formatter
         self.xlabel = xlabel
         self.title = title
         self.chart_filename = os.path.join(self.compiled_charts_dir, self.query_name) + '.svg'
         self.query = self.load_query()
         self.dataset = self.load_dataset()
         self.figure = Figure()
-        self.axes = self.figure.add_axes([0.1,0.1,0.8,0.8])        
+        self.figure.suptitle(self.title, size='xx-large', x=0.05, y=0.95, ha="left")        
+        self.axes = self.figure.add_axes([0.05,0.10,0.90,0.725])
+        self.axes.spines['top'].set_visible(False)
+        self.axes.spines['right'].set_visible(False)
+        self.axes.spines['left'].set_visible(False)
+        self.axes.margins(0.25)
+        self.axes.get_yaxis().set_ticks_position('none')
+        self.axes.tick_params(axis='y', direction='in', labelsize='x-large')
         if not os.path.exists(self.compiled_charts_dir):
             os.makedirs(self.compiled_charts_dir)
         
@@ -172,13 +183,39 @@ class Chart(object):
         
         # This increase might need to be determined dynamically, based on the
         # number of yvals we're plotting. Maybe 10% per value?
-        self.axes.set_ylim([0, max_yval*1.2])
-        self.figure.suptitle(self.title, size=16)
-        self.axes.set_ylabel(self.ylabel)
-        self.axes.set_xlabel(self.xlabel)
+        self.axes.set_ylim([0, max_yval*1.5])
+        self.axes.set_axisbelow(True)        
         self.axes.set_xticks(xvals)
-        self.axes.set_xticklabels([str(l) for l in xvals])
-        self.axes.legend()
+        self.axes.set_xticklabels([str(l) for l in xvals], color="grey", size="x-large")
+        
+        for label in self.axes.get_yticklabels():
+            label.set_va('bottom')
+            label.set_ha('left')
+            label.set_color('grey')
+        self.axes.legend(fontsize='large')
+        self.axes.grid(axis='y')        
         self.figure.savefig(self.chart_filename)
         print(f"Compiled {self.chart_filename}")
         
+    def lines(self):
+        xvals, yvals = self.dataset[self.xcol], self.dataset[self.ycols]
+        max_yval = yvals.max(axis=1).max()
+        
+        for n, yval in enumerate(yvals):
+            self.axes.plot(xvals, yvals[yval], label=self.ycol_names[n], marker='o', linewidth=3)
+        
+        # This increase might need to be determined dynamically, based on the
+        # number of yvals we're plotting. Maybe 10% per value?
+        self.axes.set_ylim([0, max_yval*1.5])
+        self.axes.grid(axis='y')
+        self.axes.set_axisbelow(True)
+        self.axes.set_xticks(xvals)
+        self.axes.set_xticklabels([str(l) for l in xvals], color="grey", size="x-large")
+        self.axes.yaxis.set_major_formatter(self.yaxis_formatter)
+        for label in self.axes.get_yticklabels():
+            label.set_va('bottom')        
+            label.set_ha('left')
+            label.set_color('grey')
+        self.axes.legend(fontsize='large')
+        self.figure.savefig(self.chart_filename)
+        print(f"Compiled {self.chart_filename}")

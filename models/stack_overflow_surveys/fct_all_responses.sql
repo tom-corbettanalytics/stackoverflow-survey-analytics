@@ -16,7 +16,8 @@ select
     coalesce(regexp_split_to_array(have_worked_language, E';'), ARRAY['Unset']::text[]) as development_languages_used,
     coalesce(regexp_split_to_array(want_work_language, E';'), ARRAY['Unset']::text[]) as development_languages_wanted,
     coalesce(regexp_split_to_array(have_worked_database, E';'), ARRAY['Unset']::text[]) as databases_used,
-    coalesce(regexp_split_to_array(want_work_database, E';'), ARRAY['Unset']::text[]) as databases_wanted
+    coalesce(regexp_split_to_array(want_work_database, E';'), ARRAY['Unset']::text[]) as databases_wanted,
+    case when professional ~ 'Student' then true else false end as student
 from survey_2017_responses
 ),
 
@@ -35,7 +36,8 @@ select
     coalesce(regexp_split_to_array(language_worked_with, E';'), ARRAY['Unset']::text[])  as development_languages_used,
     coalesce(regexp_split_to_array(language_desire_next_year, E';'), ARRAY['Unset']::text[])  as development_languages_wanted,
     coalesce(regexp_split_to_array(database_worked_with, E';'), ARRAY['Unset']::text[])  as databases_used,
-    coalesce(regexp_split_to_array(database_desire_next_year, E';'), ARRAY['Unset']::text[])  as databases_wanted
+    coalesce(regexp_split_to_array(database_desire_next_year, E';'), ARRAY['Unset']::text[])  as databases_wanted,
+    case when student ~ 'Yes' then true else false end as student
 from survey_2018_responses
 ),
 
@@ -54,7 +56,8 @@ select
     coalesce(regexp_split_to_array(language_worked_with, E';'), ARRAY['Unset']::text[]) as development_languages_used,
     coalesce(regexp_split_to_array(language_desire_next_year, E';'), ARRAY['Unset']::text[]) as development_languages_wanted,
     coalesce(regexp_split_to_array(database_worked_with, E';'), ARRAY['Unset']::text[]) as databases_used,
-    coalesce(regexp_split_to_array(database_desire_next_year, E';'), ARRAY['Unset']::text[])  as databases_wanted
+    coalesce(regexp_split_to_array(database_desire_next_year, E';'), ARRAY['Unset']::text[])  as databases_wanted,
+    case when student ~ 'Yes' then true else false end as student
 from survey_2019_responses
 ),
 

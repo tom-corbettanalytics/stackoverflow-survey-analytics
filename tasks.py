@@ -1,8 +1,12 @@
 from invoke import task
 from stack_overflow_survey_analytics.models import Survey, Chart
-from stack_overflow_survey_analytics.utils import load_sqlalchemy_engine
+from stack_overflow_survey_analytics.utils import load_sqlalchemy_engine, usd_formatter
 import pandas as pd
+import matplotlib.ticker as ticker
 import os
+
+
+pd.set_option('display.max_rows', 100)
 
 
 @task 
@@ -64,16 +68,29 @@ def load_metadata(ctx, since=2017):
 def render_charts(ctx):
     "Creates the svg charts from sql queries inside of ./analysis"
     
+    os.system('dbt compile')
+    
     charts_config = {
         'analytics_titles_per_year.sql': {
             'style': 'stacked_bars',
             'xcol': 'year',
             'ycols': ['percent_analytics_and_other_titles', 'percent_analytics_titles_only'],
-            'ycol_names': ['Analytics and other titles', 'Analytics titles only'],
+            'ycol_names': ['Analytics and other roles', 'Analytics roles only'],
             'ylabel': 'Percent of respondents',
             'xlabel': 'Year',
             'title': "Percent of respondents with Analytics titles"
         },
+        # TODO: add y-label formatter
+        'analytics_salary_per_year.sql': {
+            'style': 'lines',
+            'xcol': 'year',
+            'ycols': ['with_analytics_roles', 'without_analytics_roles'],
+            'ycol_names': ['Analytics roles', 'Other developers'],
+            'ylabel': 'Annual salary, US respondents (USD)',
+            'xlabel': 'Year',
+            'title': "Average annual salary (USD)",
+            'yaxis_formatter': ticker.FuncFormatter(usd_formatter)
+        }
     }
     
     for query_filename, kwargs in charts_config.items():
@@ -86,4 +103,16 @@ def upload_charts(ctx):
     "Uploads charts from ./charts to the s3 bucket s3://corbett-images"
     
     bucket_name = "s3://corbett-images/stack-overflow-survey-2020/"
-    os.system(f'aws s3  sync ./charts {bucket_name}')
+    os.system(f'aws s3 sync ./charts {bucket_name}')
+    
+
+@task
+def view(ctx, query_filename):
+    "Execute a query from ./analysis and print its results"
+    
+    os.system('dbt compile')
+    query_path = os.path.join(Chart.compiled_analysis_dir, query_filename + ".sql")
+    sql = open(query_path).read()
+    df = pd.read_sql(sql, load_sqlalchemy_engine())
+    print(df)
+    
