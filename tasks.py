@@ -90,6 +90,15 @@ def render_charts(ctx):
             'xlabel': 'Year',
             'title': "Average annual salary (USD)",
             'yaxis_formatter': ticker.FuncFormatter(usd_formatter)
+        },
+        'analytics_titles_by_education_level.sql': {
+            'style': 'lines',
+            'xcol':  'year',
+            'ylabel': 'Percent with advanced degrees',
+            'xlabel': 'Year',
+            'ycols': ['percent_without_analytics_with_advanced_degrees', 'percent_analytics_with_advanced_degrees'],
+            'ycol_names': ['Without analytics roles', 'With analytics roles'],
+            'title': 'Percent of developers with advanced degrees',
         }
     }
     
@@ -114,5 +123,5 @@ def view(ctx, query_filename):
     query_path = os.path.join(Chart.compiled_analysis_dir, query_filename + ".sql")
     sql = open(query_path).read()
     df = pd.read_sql(sql, load_sqlalchemy_engine())
-    print(df)
+    print(df.to_csv(sep='|'))
     

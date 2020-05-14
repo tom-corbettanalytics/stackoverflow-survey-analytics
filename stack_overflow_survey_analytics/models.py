@@ -211,7 +211,8 @@ class Chart(object):
         self.axes.set_axisbelow(True)
         self.axes.set_xticks(xvals)
         self.axes.set_xticklabels([str(l) for l in xvals], color="grey", size="x-large")
-        self.axes.yaxis.set_major_formatter(self.yaxis_formatter)
+        if self.yaxis_formatter:
+            self.axes.yaxis.set_major_formatter(self.yaxis_formatter)
         for label in self.axes.get_yticklabels():
             label.set_va('bottom')        
             label.set_ha('left')
